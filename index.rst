@@ -19,11 +19,12 @@ PHP Extension 開発入門
   7-zval
   8-function
   9-testing
-  11-string
+  10-string
   12-reference-counting
   a-coding-style
   b-gdb
   c-phpdbg
+  d-xdebug
 
 Indices and tables
 ==================

@@ -1,0 +1,6 @@
+.rst-content .line-block {
+  margin-left: 0px;
+}
+.rst-content table.docutils th , .rst-content table.docutils td {
+  padding:  8px 8px;
+}

@@ -5,7 +5,10 @@
 3.1.ext ディレクトリの構成
 ==========================
 
-　php のソースツリーの中の ext ディレクトリ配下には、標準で配布されている Extension があります。::
+　php のソースツリーの中の ext ディレクトリ配下には、PHP に配布物に標準で同梱されている Extension があります。
+
+.. code-block:: bash
+  :emphasize-lines: 1,2
 
   ~/php$ cd ext
   ~/php/ext$ ls -F
@@ -26,7 +29,10 @@
   filter/             mysqli/     pgsql/         standard/
   ftp/                mysqlnd/    phar/          sysvmsg/
 
-　今回、configure 時に何も Extension の指定をしなかったので、この中で php バイナリに組み込まれているのは standard 配下など一部のものだけとなります。組み込まれているモジュールは、 ``php -m`` で確認できます。::
+　今回、configure 時に何も Extension の指定をしなかったので、生成された php バイナリに組み込まれているのはこの中の standard 配下など一部のものだけとなります。組み込まれているモジュールは、 ``php -m`` で確認できます。
+
+.. code-block:: bash
+  :emphasize-lines: 1
 
   ~/php/ext$ php -m
   [PHP Modules]
@@ -58,12 +64,15 @@
   
   [Zend Modules]
 
-　新たに作成する Extension の名前は、これらのモジュール名や ext 配下のディレクトリ名と重複しないようにする必要があります。ここでは、新しい Extension の名前を "my_ext" とします。
+　新たに作成する Extension の名前は、これらのモジュール名や ext 配下のディレクトリ名と重複しないように決定する必要があります。ここでは、新しい Extension の名前を "my_ext" とします。
 
 3.2.ひな形の作成
 ================
 
-　./ext_skel コマンドを実行し、現在のシステム構成をベースにして、新しい Extension ``my_ext`` のためのスケルトン（ひな形）を作成します。::
+　./ext_skel コマンドを実行し、現在のシステム構成をベースにして、新しい Extension ``my_ext`` のためのスケルトン（ひな形）を作成します。
+
+.. code-block:: bash
+  :emphasize-lines: 1
 
   ~/php/ext$ ./ext_skel --extname=my_ext --skel=./skeleton
   reating directory my_ext
@@ -82,12 +91,15 @@
   
   Repeat steps 3-6 until you are satisfied with ext/my_ext/config.m4 and step 6 confirms that your module is compiled into PHP. Then, start writing code and repeat the last two steps as often as necessary.
 
-　ext/my_ext ディレクトリが作られ、その中にひな形のコードが出力されます。::
+　ext/my_ext ディレクトリが作られ、その中にひな形のコードが出力されます。
+
+.. code-block:: bash
+  :emphasize-lines: 1,2
 
   ~/php/ext$ cd my_ext/
   ~/php/ext/my_ext$ ls
   CREDITS       config.m4   my_ext.c    php_my_ext.h
-  EXPERIMENTAL  config.w32  my_ext.php  tests
+  EXPERIMENTAL  config.w32  my_ext.php  tests/
 
 　特に重要なファイルは以下の通りです。
 
@@ -109,11 +121,13 @@ tests
 3.3.config.m4 の修正
 ====================
 
-　config.m4 は UNIX 用の伝統的なマクロ・プリプロセッサである M4 の文法で書かれています。dnl で始まる行はコメントです。まずは、ビルドするために必要最小限の部分のコメントを外して有効にします。これ以降、変更分は diff の出力として記載します。'<' が変更前、'>' が変更後の内容を表しています。::
+　config.m4 は UNIX 用の伝統的なマクロ・プリプロセッサである M4 の文法で書かれています。 ``dnl`` で始まる行はコメントです。まずは、ビルドするために必要最小限の部分のコメントを外して有効にします。これ以降、変更分は diff の出力として記載します。 ``'<'`` が変更前、 ``'>'`` が変更後の内容を表します。
 
-  ~/php/ext/my_ext$ cp config.m4 /tmp
+.. code-block:: bash
+  :emphasize-lines: 1,2
+
   ~/php/ext/my_ext$ vi config.m4
-  ~/php/ext/my_ext$ diff /tmp/config.m4 config.m4
+  ~/php/ext/my_ext$ git diff config.m4
   16,18c16,18
   < dnl PHP_ARG_ENABLE(my_ext, whether to enable my_ext support,
   < dnl Make sure that the comment is aligned:
@@ -123,14 +137,15 @@ tests
   > Make sure that the comment is aligned:
   > [  --enable-my_ext           Enable my_ext support])
 
-　これにより、PHP_ARG_ENABLE マクロと ``--enable-my_ext`` ビルドオプションが有効になりました。 この少し上に ``--with-my_ext`` を有効にする部分がありますが、これらの違いについて説明します。
-
-　``--enable-my_ext`` を指定すると、作成する Extension は my_ext.so という共有ライブラリファイルとして提供され、php.ini の `extension ディレクティブ <http://php.net/manual/ja/ini.core.php#ini.extension>`_ によりその機能を On/Off することができます。一方 ``--with-my_ext`` の場合、my_ext 相当の機能は PHP のコアバイナリの中に組み込まれます。設定なしで使えるようになりますが、my_ext の分だけ PHP バイナリのサイズが大きくなります。今回は .so を作ることにします。
+　これにより、PHP_ARG_ENABLE マクロと ``--enable-my_ext`` ビルドオプションが有効になりました。このように、単に Extension を有効にしたい場合（特にパラメーター指定が不要の場合）は ``--enable-XXX`` オプションを使います。ライブラリの場所等、何らかのパラメーターを指定できるようにしたい場合は ``--with-XXX`` オプションを使います。
 
 3.4.はじめてのビルド
 ====================
 
-　phpize （autoconf のラッパー）により config.m4 から configure コマンドを生成します。::
+　phpize （autoconf のラッパー）により config.m4 から configure コマンドを生成します。
+
+.. code-block:: bash
+  :emphasize-lines: 1,6
 
   ~/php/ext/my_ext$ phpize
   Configuring for:
@@ -144,7 +159,10 @@ tests
   acinclude.m4     config.h.in     configure.in  my_ext.c
   aclocal.m4       config.m4       install-sh    my_ext.php
 
-　生成された configure コマンドは、my_ext 専用です。``--enable-my_ext`` オプションが有効になっていることを確認後、ビルドしてみます。::
+　生成された configure コマンドは、my_ext 専用です。``--enable-my_ext`` オプションが有効になっていることを確認後、ビルドしてみます。
+
+.. code-block:: bash
+  :emphasize-lines: 1,3,6,10
 
   ~/php/ext/my_ext$ ./configure --help | grep my_ext
     --enable-my_ext           Enable my_ext support
@@ -154,7 +172,7 @@ tests
   ~/php/ext/my_ext$ make
   （中略）
   Build complete.
-  Don't forget to run 'make test'.
+  Don\'t forget to run 'make test'.
   ~/php/ext/my_ext$ ls modules/
   my_ext.la  my_ext.so
 
@@ -163,7 +181,10 @@ tests
 3.5.はじめての実行
 ==================
 
-　ext_skel により作成されたサンプルスクリプト my_ext.php を使って、Extension が正しく作られたかどうかを確認します。まだシステムグローバルでは my_ext.so を認識できていないので、コマンドライン引数で Extension の共有ライブラリファイルを指定して起動します。::
+　ext_skel により作成されたサンプルスクリプト my_ext.php を使って、Extension が正しく作られたかどうかを確認します。まだシステムグローバルでは my_ext.so を認識できていないので、コマンドライン引数で Extension の共有ライブラリファイルを指定して起動します。
+
+.. code-block:: bash
+  :emphasize-lines: 1
 
   ~/php/ext/my_ext$ php -d extension=modules/my_ext.so my_ext.php
   Functions available in the test extension:
@@ -171,7 +192,10 @@ tests
   
   Congratulations! You have successfully modified ext/my_ext/config.m4. Module my_ext is now compiled into PHP.
 
-　正常に実行されたようです。my_ext.php の中身は以下のようになっています。::
+　正常に実行されたようです。my_ext.php の中身は以下のようになっています。
+
+.. code-block:: bash
+  :emphasize-lines: 1
 
   ~/php/ext/my_ext$ cat -n my_ext.php
      1  <?php
@@ -196,9 +220,12 @@ tests
     20  echo "$str\n";
     21  ?>
 
-　実行結果と見比べてみましょう。出力の２行目の ``confirm_my_ext_compiled`` は、11 行目の echo $func の出力結果です。またこれと同じ文字列を 14 行目で生成して $function に代入し、16 行目でこの変数を介して動的に ``confirm_my_ext_compiled('my_ext')`` を呼び出しています。 ``Congraturations! ...`` は confirm_my_ext_compiled() 関数の中で出力されているようです。この関数の実体は、my_php.c の中で以下のように定義されています。::
+　実行結果と見比べてみましょう。出力の２行目の ``confirm_my_ext_compiled`` は、11 行目の echo $func の出力結果です。またこれと同じ文字列を 14 行目で生成して $function に代入し、16 行目でこの変数を介して動的に ``confirm_my_ext_compiled('my_ext')`` を呼び出しています。 ``Congraturations! ...`` は confirm_my_ext_compiled() 関数の中で出力されているようです。この関数の実体は、my_php.c の中で以下のように定義されています。
 
-  ~/php/ext/my_ext$ cat my_ext.c | sed -n '54,68p'
+.. code-block:: bash
+  :emphasize-lines: 1
+
+  ~/php/ext/my_ext$ sed -n '54,68p' my_ext.c
   PHP_FUNCTION(confirm_my_ext_compiled)
   {
           char *arg = NULL;
