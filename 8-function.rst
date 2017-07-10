@@ -5,7 +5,9 @@
 8.1.PHP_FUNCTIONマクロ
 ======================
 
-　my_echo_int は、最終的に以下のようになりました（再掲）。::
+　my_echo_int は、最終的に以下のようになりました（再掲）。
+
+.. code-block:: c
 
   /* {{{ proto void my_echo_int(int arg)
     コンソールに関数名と引数を表示します。
@@ -23,7 +25,10 @@
     my_echo_int(arg);
   }
 
-　PHP_FUNCTION マクロの定義は以下のようになっています（一部空白を編集）。::
+　PHP_FUNCTION マクロの定義は以下のようになっています（一部空白を編集）。
+
+.. code-block:: bash
+  :emphasize-lines: 1,3,5,7,9
 
   ~/php$ grep -rw 'define PHP_FUNCTION' .
   ./main/php.h:#define PHP_FUNCTION                   ZEND_FUNCTION
@@ -36,7 +41,9 @@
   ~/php$ grep -rw 'define INTERNAL_FUNCTION_PARAMETERS' .
   ./Zend/zend.h:#define INTERNAL_FUNCTION_PARAMETERS zend_execute_data *execute_data, zval *return_value
 
-　``PHP_FUNCTION(my_echo_int)`` は、プリプロセッサにより最終的に::
+　``PHP_FUNCTION(my_echo_int)`` は、プリプロセッサにより最終的に
+
+::
 
   void zif_my_echo_int(zend_execute_data *execute_data, zval *return_value)
 
@@ -47,7 +54,7 @@
 
 　疑似関数では、まず ``ZEND_NUM_ARGS()`` マクロを使って引数の数をチェックします。引数の数が誤っている場合、 ``WRONG_PARAM_COUNT`` マクロを使います。これは内部的に引数エラーを発生させて、そのまま上位にリターンします。これらのマクロは Zend/zend_API.h で定義されています。引数の数が合っていれば次に進みます。
 
-　疑似関数は、（PHP の）int 型の引数を１つ取ります。疑似関数で引数を受け取るには、まず引数に対応するローカル変数を宣言します。PHP の int 型に対応するのは zend_long 型です。
+　今回の疑似関数は、（PHP の）int 型の引数を１つ取ります。疑似関数で引数を受け取るには、まず引数に対応するローカル変数を宣言します。PHP の int 型に対応するのは zend_long 型です。
 
 　次に zend_parse_parameters() で引数を受け取ります。この説明は次節で行います。
 
@@ -56,16 +63,18 @@
 8.3.zend_parse_parameters()
 ===========================
 
-　この関数のプロトタイプは Zend/zend_API.h で以下のように定義されています。::
+　この関数のプロトタイプは Zend/zend_API.h で以下のように定義されています。
+
+.. code-block:: c
 
   ZEND_API int zend_parse_parameters(int num_args, const char *type_spec, ...);
 
-　num_args には ZEND_NUM_ARGS() を渡します。type_spec は、Zend Engine における型を表す文字を引数の順に並べた書式文字列（次節を参照）です。３番目以降のパラメーターには、引数を受け取るための個々の変数へのポインタを列挙します。
+　num_args には ZEND_NUM_ARGS() を渡します。type_spec は、Zend Engine における型を表す文字を引数の順に並べた書式文字列です。３番目以降のパラメーターには、引数を受け取るための個々の変数へのポインタを列挙します。
 
 8.3.1.書式文字列（型）
 ----------------------
 
-　type_spec に指定可能な、書式文字列を以下に示します。
+　type_spec に指定可能な、書式文字列を以下に示します。指定文字が 'f, 'O', 'p', 's' のケースでは、２つの内部変数を使って値を受け取ります。
 
 .. list-table:: 書式文字列（型）
   :widths: 10 40 40
@@ -147,7 +156,7 @@
   * - \|
     - | 残りのパラメーターは任意指定（省略可能）であることを示します。
       | これらが渡されない場合でもパース関数は特になにもしないので、
-      | 拡張モジュールが責任持ってデフォルト値に初期化してやらなければなりません。
+      | Extension が責任を持ってデフォルト値に初期化してやらなければなりません。
   * - /
     - これ以降のパラメーターに対して SEPARATE_ZVAL_IF_NOT_REF() を使います。
   * - !
@@ -164,15 +173,14 @@
 8.3.4.書式文字列の使用例
 ------------------------
 
-　~/php/ext/ 配下から、いくつか標準関数の引数の受け取り方の例を見てみましょう。
+　~/php/ext/ 配下から、いくつかの関数について引数の受け取り方の例を見てみましょう。
 
-addslashes
+posix_kill
 ^^^^^^^^^^
 
-プロトタイプ
-  bool posix_kill ( int $pid , int $sig )
-説明
+.. php:function:: bool posix_kill ( int $pid , int $sig )
   プロセスにシグナルを送信するする
+
 実装
   php/ext/posix/posix.c::
 
@@ -187,10 +195,9 @@ addslashes
 posix_mknod
 ^^^^^^^^^^^^
 
-プロトタイプ
-  bool posix_mknod ( string $pathname , int $mode [, int $major = 0 [, int $minor = 0 ]] )
-説明
+.. php:function:: bool posix_mknod ( string $pathname , int $mode [, int $major = 0 [, int $minor = 0 ]] )
   スペシャルファイルあるいは通常のファイルを作成する (POSIX.1)
+
 実装
   php/ext/posix/posix.c::
 
@@ -213,10 +220,9 @@ posix_mknod
 curl_multi_info_read
 ^^^^^^^^^^^^^^^^^^^^
 
-プロトタイプ
-  array curl_multi_info_read ( resource $mh [, int &$msgs_in_queue = NULL ] )
-説明
+.. php:function:: array curl_multi_info_read ( resource $mh [, int &$msgs_in_queue = NULL ] )
   現在の転送についての情報を表示する
+
 実装
   php/ext/curl/multi.c::
 
@@ -235,10 +241,10 @@ curl_multi_info_read
 SQLite3::openBlob
 ^^^^^^^^^^^^^^^^^
 
-プロトタイプ
-  public resource SQLite3::open ( string $table , string $column , int $rowid [, string $dbname = "main" ] )
-説明
-  Opens a stream resource to read a BLOB
+.. php:function:: public resource SQLite3::open ( string $table , string $column \
+  , int $rowid [, string $dbname = "main" ] )
+  ストリームリソースをオープンして BLOB を読み込む
+
 実装
   php/ext/sqlite3/sqlite3.c::
 
@@ -257,7 +263,8 @@ SQLite3::openBlob
     
         SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
     
-        if (zend_parse_parameters(ZEND_NUM_ARGS(), "ssl|s", &table, &table_len, &column, &column_len, &rowid, &dbname, &dbname_len) == FAILURE) {
+        if (zend_parse_parameters(ZEND_NUM_ARGS(), "ssl|s", 
+          &table, &table_len, &column, &column_len, &rowid, &dbname, 
+          &dbname_len) == FAILURE) {
             return;
         }
-

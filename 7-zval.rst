@@ -1,15 +1,19 @@
-================
-7.PHP の内部構造
-================
+.. _zval:
 
-7.1.zval
-========
+=================
+7.ZVAL の内部構造
+=================
+
+7.1.zval とは
+=============
 
 　PHP スクリプト（ユーザーランド）では、変数やオブジェクトは頭に ``$`` を付けるとか、関数やクラスはシンボルの前に ``function`` や ``class`` が来るなど、文法的にさまざまな取り決めがあります。
 
 　一方、PHP の内部（Zend Engine）では、すべての変数やオブジェクトは、それぞれが zval と呼ばれるコンテナによって統合的に管理されています。Extension を開発するにあたっては、ほとんどの内部処理は zval やそのメンバーに対して操作を行なうことになりますので、zval の理解は必須となります。ここでは zval の概要をご紹介します。
 
-　zval は、Zend/zend_types.h で定義されています。::
+　zval は、Zend/zend_types.h で定義されています。
+
+.. code-block:: c
 
   typedef struct _zval_struct     zval;
   
@@ -38,7 +42,7 @@
     } u2;
   };
 
-　zval は、以下の３つのエリアに分けられます。
+　zval は、以下の３つのエリアから構成されています。
 
 .. list-table::
   :widths: 5 10 10 50
@@ -66,10 +70,14 @@
 
 　後半の u2 共用体は、コメントを見ると foreach が使っていそうとかなんとなく想像できるものもありますが、これらは基本的に Zend Engine 自身が使っているもので、Extension を開発する分には特に意識する必要はありません。
 
+.. _zend_value:
+
 7.2.zend_value
 ==============
 
-　zend_value の定義も Zend/zend_types.h の中にあります。::
+　zend_value の定義も Zend/zend_types.h の中にあります。
+
+.. code-block:: c
 
   typedef union _zend_value {
     zend_long         lval;       /* long value */
@@ -114,17 +122,17 @@
   * - 3
     - zend_refcounted
     - \*counted
-    - －
+    - :ref:`reference_counting`
     - Z_COUNTED(zval)
   * - 4
     - zend_string
     - \*str
-    - 文字列(string)
+    - `文字列(string) <http://php.net/manual/ja/language.types.string.php>`_
     - Z_STR(zval)
   * - 5
     - zend_array
     - \*arr
-    - 配列(array)
+    - `配列(array) <http://php.net/manual/ja/language.types.array.php>`_
     - Z_ARR(zval)
   * - 6
     - zend_object
@@ -144,7 +152,7 @@
   * - 9
     - zend_ast_ref
     - \*ast
-    - 抽象構文木
+    - `抽象構文木 <https://www.slideshare.net/do_aki/php-ast>`_
     - Z_AST(zval)
   * - 10
     - zval
@@ -172,7 +180,9 @@
 7.3.オブジェクトの型
 ====================
 
-　（一部の例外を除いて）zval の値は zend_value に入っていますが、その値の型は (zval).u1 にある type / type_flags / type_info といったプロパティで管理されています。実際の型は、Zend/zend_types.h で以下のように定義されています。::
+　（一部の例外を除いて）zval の値は zend_value に入っていますが、その値の型は (zval).u1 にある type / type_flags / type_info といったプロパティで管理されています。実際の型は、Zend/zend_types.h で以下のように定義されています。
+
+.. code-block:: c
 
   #define IS_UNDEF          0
   #define IS_NULL           1
@@ -188,7 +198,7 @@
 
 　これらは必ずしも同じレベルではありません。たとえば bool 値を扱う場合 _IS_BOOL で判定しますが、実際にセットする値は IS_TRUE または IS_FALSE であり、セットする先も zend_value ではなく (zval).u1.type_info だったりします。ただマクロを使っている限りは、これらの差異を意識しなくても済みます。
 
-　なお IS_STRING 以上の型については、それぞれに独自のコンストラクタとデストラクタを保つ場合があります。
+　なお IS_STRING 以上の型については、それぞれに独自のコンストラクタとデストラクタを持つ場合があります。
 
 7.4.アクセサ・マクロ
 ====================
@@ -273,19 +283,20 @@
 .. list-table:: 代入・返却用マクロ
   :header-rows: 1
 
-  * - No.
-    - 代入
+  * - 型名シンボル
+    - 変数への代入
     - return_value への代入
-    - 返却
-  * - 1
+    - 呼び出し元への返却
+  * - IS_UNDEF
     - ZVAL_UNDEF(z)
     - N/A
     - N/A
-  * - 2
+  * - IS_NULL
     - ZVAL_NULL(z)
     - RETVAL_NULL()
     - RETURN_NULL()
-  * - 3
+  * - | IS_FALSE
+      | IS_TRUE
     - | ZVAL_BOOL(z, b)
       | ZVAL_FALSE(z)
       | ZVAL_TRUE(z)
@@ -295,15 +306,15 @@
     - | RETURN_BOOL(b)
       | RETURN_FALSE
       | RETURN_TRUE
-  * - 4
+  * - IS_LONG
     - ZVAL_LONG(z, l)
     - RETVAL_LONG(l)
     - RETURN_LONG(l)
-  * - 5
+  * - IS_DOUBLE
     - ZVAL_DOUBLE(z, d)
     - RETVAL_DOUBLE(d)
     - RETURN_DOUBLE(d)
-  * - 6
+  * - IS_STRING
     - | ZVAL_STR(z, s)
       | ZVAL_INTERNED_STR(z, s)
       | ZVAL_NEW_STR(z, s)
@@ -322,28 +333,30 @@
       | RETURN_STRING(s)
       | RETURN_STRINGL(s, l)
       | RETURN_EMPTY_STRING()
-  * - 7
+  * - IS_ARRAY
     - | ZVAL_ARR(z, a)
       | ZVAL_NEW_ARR(z)
-      | ZVAL_NEW_PERSISTENT_ARR(z)
+      | ZVAL_NEW_PERSISTENT
+      |   _ARR(z)
     - RETVAL_ARR(r)
     - RETURN_ARR(r)
-  * - 8
+  * - IS_OBJECT
     - ZVAL_OBJ(z, o)
     - RETVAL_OBJ(r)
     - RETURN_OBJ(r)
-  * - 9
+  * - IS_RESOURCE
     - | ZVAL_RES(z, r)
       | ZVAL_NEW_RES(z, h, p, t)
-      | ZVAL_NEW_PERSISTENT_RES
-      |   (z, h, p, t)
+      | ZVAL_NEW_PERSISTENT
+      |   _RES(z, h, p, t)
     - RETVAL_RES(r)
     - RETURN_RES(r)
-  * - 10
+  * - IS_REFERENCE
     - | ZVAL_REF(z, r)
       | ZVAL_NEW_EMPTY_REF(z)
       | ZVAL_NEW_REF(z, r)
-      | ZVAL_NEW_PERSISTENT_REF(z, r)
+      | ZVAL_NEW_PERSISTENT
+      |   _REF(z, r)
       | ZVAL_UNREF(z)
       | ZVAL_COPY_UNREF(z, v)
     - N/A
@@ -354,7 +367,9 @@
 
 　内部で使用する特殊な型もあります。これらは関数の戻り値にはなりません。
 
-型の定義::
+型の定義
+
+.. code-block:: c
 
   /* constant expressions */
   #define IS_CONSTANT       11

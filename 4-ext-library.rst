@@ -5,14 +5,20 @@
 4.1.想定するシナリオ
 ====================
 
-　C のソースの中身に入っていく前に、ちょっと寄り道をします。PHP Extension を開発する必要性が生じるケースとして代表的な、外部ライブラリの利用をシナリオとして想定します。このために、別途ダミーの C ライブラリを用意しましたので、以下の手順でビルドしてください。::
+　C のソースの中身に入っていく前に、ちょっと寄り道をします。PHP Extension を開発する必要性が生じるケースとして代表的な、外部ライブラリの利用をシナリオとして想定します。このために、別途ダミーの C ライブラリを用意しました。以下の手順でビルドしてください。
+
+.. code-block:: bash
+  :emphasize-lines: 1-4
 
   ~/php/ext/my_ext$ cd
   ~$ git clone https://github.com/hotta/my_lib.git
   ~$ cd my_lib
   ~/my_lib$ make
 
-　これにより、~/my_lib 配下に libmy_lib.so という共有ライブラリファイルが作られます。mylib_test という名前のテスト用プログラムも用意していますので、試しに使ってみてください。::
+　これにより、~/my_lib 配下に libmy_lib.so という共有ライブラリファイルが作られます。mylib_test という名前のテスト用プログラムも用意していますので、試しに使ってみてください。
+
+.. code-block:: bash
+  :emphasize-lines: 1,7
 
   ~/my_lib$ ./mylib_test
   my_echo_int(123)
@@ -20,10 +26,10 @@
   my_echo_string("hello world")
   my_add_return_int(30, 40) = 70
   my_add_return_str("hello", "world") = "helloworld"
-  ~/my_lib$ sudo tail -f /var/log/messages
+  ~/my_lib$ sudo tail -1 /var/log/messages
   Jun  7 11:45:14 php-reform MY_EXT: MY_LOGGER_TEST
 
-　mylib_test は libmy_lib.so にある API 関数を一つずつ呼び出します。mylib_test のソース test.c は以下の通りです。
+　mylib_test コマンドは libmy_lib.so にある API 関数を一つずつ呼び出します。mylib_test のソース test.c は以下の通りです。
 
 my_lib/test/test.c::
 
@@ -49,7 +55,7 @@ my_lib/test/test.c::
     return  0;
   }
 
-　``my_`` で始まる関数の実体は components ディレクトリの中にあります。C で呼ぶ場合は上記の通りですが、今回はこれらの関数を PHP から呼ぶための PHP Extension を作成してみます。
+　``my_`` で始まる関数の実体は components ディレクトリの中にあります。C から呼ぶ場合は上記の通りですが、今回はこれらの関数を PHP から呼ぶための PHP Extension を作成してみます。
 
 4.2.ライブラリの構成
 ====================
@@ -57,9 +63,12 @@ my_lib/test/test.c::
 　C で書かれた外部ライブラリの機能を呼び出すためには、以下のことが前提となります。
 
 * 参照したい共有ライブラリが、外部に関数名を公開（エクスポート）していること。
-* その共有ライブラリが公開している関数のインターフェイス（呼び出し方法）が、C のヘッダファイルとして提供されていること。
+* 共有ライブラリが公開している関数のインターフェイス（呼び出し方法）が、C のヘッダファイルとして提供されていること。
 
-　ライブラリが公開している関数シンボルは、objdump コマンドで確認できます。::
+　ライブラリが公開している関数シンボルは、objdump コマンドで確認できます。
+
+.. code-block:: bash
+  :emphasize-lines: 1
 
   ~/my_lib$ objdump -T libmy_lib.so
   
@@ -91,11 +100,14 @@ my_lib/test/test.c::
   0000000000000968 g    DF .text  000000000000002d  Base        my_echo_double
   0000000000000a01 g    DF .text  000000000000007f  Base        my_add_return_str
 
-　第２カラムが ``g`` になっているのが公開されているグルーバルシンボルです。また第４カラムが ``.text`` になっているのは、このシンボルがプログラム部分にある（つまり関数名である）ことを示します。test.c で呼び出している関数群が公開されているのがわかります。
+　第２カラムが ``g`` になっているのが公開されているグルーバルシンボルです。また第４カラムが ``.text`` になっているのは、このシンボルがプログラム部分にある（≒関数名である）ことを示します。test.c で呼び出している関数群が公開されているのがわかります。
 
-　ちなみに第４カラムが ``*UND*`` (undefined) のものは、この（バイナリの）中では定義されていない外部シンボルを表しており、GLIBC に含まれる strcpy(3) や printf(3) といった関数が内部で使われ（外部参照され）ているのがわかります。
+　ちなみに第４カラムが ``*UND*`` (undefined) のものは、この（バイナリの）中では定義されていない外部シンボルへの参照を表しており、GLIBC に含まれる strcpy(3) や printf(3) といった関数が内部で使われ（外部参照され）ているのがわかります。
 
-　なお、関数のインターフェイスを提示するヘッダファイルの中身は、以下のようになっています。::
+　なお、関数のインターフェイスを提示するヘッダファイルの中身は、以下のようになっています。
+
+.. code-block:: bash
+  :emphasize-lines: 1
 
   ~/my_lib$ cat my_lib.h
   extern  void  my_echo_int(int arg);
@@ -109,7 +121,10 @@ my_lib/test/test.c::
 4.3.外部ライブラリへの依存を追加
 ================================
 
-　PHP のソースツリーから見ると ~/my_lib/{my_lib.h,libmy_lib.so} は知らない存在なので、これをコンパイラやリンカに教えてやる必要があります。config.m4 を以下のように修正します。::
+　PHP のソースツリーから見ると ~/my_lib/{my_lib.h,libmy_lib.so} は知らない存在なので、これをコンパイラやリンカに教えてやる必要があります。config.m4 を以下のように修正します。
+
+.. code-block:: bash
+  :emphasize-lines: 1
 
   ~/php/ext/my_ext$ diff /tmp/config.m4 config.m4
   43,44c43,45
@@ -163,7 +178,10 @@ my_lib/test/test.c::
 
 　前半の変更は my_lib.h を見つけるためです。後半の変更は、libmy_lib.so を見つけ、その中でさらに my_echo_int 関数の存在を確認しています。[1]_
 
-　再度 phpize からやり直します。::
+　再度 phpize からやり直します。
+
+.. code-block:: bash
+  :emphasize-lines: 1,6,8
 
   ~/php/ext/my_ext$ phpize
   Configuring for:
