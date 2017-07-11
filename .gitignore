@@ -3,4 +3,5 @@ _build
 _templates
 conf.py
 make.bat
+_templates
 _static/ad-snippet.js
