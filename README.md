@@ -1,4 +1,4 @@
-PHP Extension 開発入門
+[PHP Extension 開発入門](https://net-newbie.com/phpext/)のソース置き場
 
 # 環境構築
 
